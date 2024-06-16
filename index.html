@@ -7,17 +7,33 @@ button {
   border-radius: 0;
   box-shadow: none;
   background: none;
-  margin: 0.2em 0.1em;
-  padding: 0.2em 0.4em;
-  font-size: 2em;
+  margin: 0.2em 0.4em 0.2em 0;
+  padding: 0.2em 0.6em;
+  font-size: 4em;
+}
+
+input[type="range"] {
+  width: 90vw;
+  margin: 1vh 2vh;
+  height: 4vh;
+  background: #ccc;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  background-color: #acf;
+  appearance: none;
+  width: 2em;
+  height: 4vh;
 }
 
 a {
+  font-size: 3em;
   display: block;
   text-decoration: none;
   border: 1px solid black;
   width: fit-content;
-  margin: 0.2em 0;
+  margin: 0.6em 0;
   padding: 0.2em 0.4em;
   color: black;
 }
@@ -30,7 +46,7 @@ a:hover {
 </head>
 
 <body>
-<input style='width: 100vw; height: 5vh' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+<input oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
 <button onclick="fetch('/pause')">Pause</button>
 <button onclick="fetch('/next')">Next</button>
 <button id='play'>Play</button>
