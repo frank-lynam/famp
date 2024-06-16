@@ -1,0 +1,57 @@
+<html>
+<head>
+<style>
+
+button {
+  border: 1px solid black;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+  margin: 0.2em 0.1em;
+  padding: 0.2em 0.4em;
+  font-size: 2em;
+}
+
+a {
+  display: block;
+  text-decoration: none;
+  border: 1px solid black;
+  width: fit-content;
+  margin: 0.2em 0;
+  padding: 0.2em 0.4em;
+  color: black;
+}
+
+a:hover {
+  filter: saturate(2) brightness(0.8);
+}
+
+</style>
+</head>
+
+<body>
+<input style='width: 100vw; height: 5vh' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+<button onclick="fetch('/pause')">Pause</button>
+<button onclick="fetch('/next')">Next</button>
+<button id='play'>Play</button>
+<div id='list'></div>
+<script>
+let params = new URLSearchParams(window.location.search)
+let path = params.get("path") != null ? (params.get("path") + "/") : "/"
+fetch(`/list?path=${path}`).then(r=>r.json()).then(r=>{
+  document.getElementById("list").innerHTML = r
+    .map((x,i)=>`<a style="background: hsl(${(i*37)%360}, 100%, 90%)" `
+              + `href="?path=${path}${encodeURIComponent(x)}">${x}</a>`).join("\n")
+})
+
+let pb = document.getElementById("play")
+pb.addEventListener("click", ()=>{
+  fetch(`/play?path=${path}`); 
+})
+;[...document.getElementsByTagName("button")].forEach(x=>x.addEventListener("click", (e)=>{
+  setTimeout(()=>{e.target.style.background='none'}, 250); 
+  e.target.style.background='#aaa'
+}))
+</script>
+</body>
+</html>
