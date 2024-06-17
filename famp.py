@@ -61,10 +61,11 @@ class famp(http.server.BaseHTTPRequestHandler):
 
 def get_file(state):
   while state["running"]:
+    time.sleep(0.5)
     os.system("echo '' > famp.log")
     os.system("echo 'get_property filename' > /tmp/famp-control")
     os.system("echo 'get_property volume' > /tmp/famp-control")
-    time.sleep(0.5)
+    time.sleep(0.05)
     with open("famp.log", errors='ignore') as fl:
       d = fl.readlines()
     got = 0
