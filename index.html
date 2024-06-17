@@ -20,6 +20,13 @@ input[type="range"] {
   appearance: none;
 }
 
+input[type="range"]::-webkit-range-thumb {
+  background-color: #acf;
+  appearance: none;
+  width: 2em;
+  height: 4vh;
+}
+
 input[type="range"]::-webkit-slider-thumb {
   background-color: #acf;
   appearance: none;
@@ -46,16 +53,23 @@ a:hover {
 </head>
 
 <body>
-<input oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
-<button onclick="fetch('/pause')">Pause</button>
-<button onclick="fetch('/next')">Next</button>
-<button id='play'>Play</button>
+<p style='font-size: 3em' id='playing'></p>
+<input id='volume' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+<p>
+  <button onclick="fetch('/pause')">Pause</button>
+  <button onclick="fetch('/next')">Next</button>
+  <button id='play'>Play</button>
+</p>
+<p>
+  <button id='inside' onclick="fetch('/mute?side=in')">In</button>
+  <button id='outside' onclick="fetch('/mute?side=out')">Out</button>
+</p>
 <div id='list'></div>
 <script>
 let params = new URLSearchParams(window.location.search)
 let path = params.get("path") != null ? (params.get("path") + "/") : "/"
 fetch(`/list?path=${path}`).then(r=>r.json()).then(r=>{
-  document.getElementById("list").innerHTML = r
+  document.getElementById("list").innerHTML = r.sort()
     .map((x,i)=>`<a style="background: hsl(${(i*37)%360}, 100%, 90%)" `
               + `href="?path=${path}${encodeURIComponent(x)}">${x}</a>`).join("\n")
 })
@@ -68,6 +82,14 @@ pb.addEventListener("click", ()=>{
   setTimeout(()=>{e.target.style.background='none'}, 250); 
   e.target.style.background='#aaa'
 }))
+
+setInterval(()=>{
+  fetch("/state").then(r=>r.json()).then(r=>{
+    document.getElementById("inside").style.background = r.in ? "#cfc" : "#fcc"
+    document.getElementById("outside").style.background = r.out ? "#cfc" : "#fcc"
+    document.getElementById("volume").value = r.vol
+    document.getElementById("playing").innerHTML = r.file
+})}, 500)
 </script>
 </body>
 </html>
