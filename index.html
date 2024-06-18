@@ -17,8 +17,8 @@ button {
 
 input[type="range"] {
   width: 90vw;
-  margin: 0.5vh 2vh 1vh 2vh;
   height: 4vh;
+  margin: 2vh 0;
   background: #ccc;
   appearance: none;
 }
@@ -57,57 +57,68 @@ a.file:hover {
 
 <body>
 
-<details>
-  <summary style='cursor: pointer; font-size: 3em' id='playing'>Loading...</summary>
-  <p id="playlist"></p>
-</details>
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center">
 
-<input id='volume' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
-
-<p>
-  <button id='pause' onclick="fetch('/pause')">&#9199;</button>
-  <button onclick="fetch('/next')">&#9197;</button>
-  <button id='play'>&#127926;</button>
-</p>
-
-<p>
   <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='dr' onclick="fetch('/mute?side=dr')">&#x1f37d;</button>
   <button id='outside' onclick="fetch('/mute?side=out')">&#x1f3e1;</button>
-</p>
+
+<input style="grid-column: 1/4" id='volume' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+
+  <button id='pause' onclick="fetch('/pause')">&#9199;</button>
+  <button onclick="fetch('/next')">&#9197;</button>
+  <button id='play'>&#127926;</button>
+
+</div>
+
+<details style='margin: 2vh 0'>
+  <summary style='cursor: pointer; font-size: 3em' id='playing'>Loading...</summary>
+  <p id="playlist"></p>
+</details>
 
 <p style='font-size: 3em' id='path'></p>
 
 <div id='list'></div>
 
 <script>
+// Get query parameters
 let params = new URLSearchParams(window.location.search)
 let path = params.get("path") != null ? (params.get("path") + "/") : "/"
+
+// Display path with linkd
 document.getElementById("path").innerHTML = ("Root" + path).split("/").map((x,i,a)=>`<a href="/?path=/${encodeURIComponent(a.slice(1,i+1).join("/"))}">${x}</a>`).join("/")
+
+// List folder contents
 fetch(`/list?path=${encodeURIComponent(path)}`).then(r=>r.json()).then(r=>{
+  // If path is a file and it isn't playing, play it
   if (r=="play") {fetch("/state").then(r=>r.json()).then(r=>{
     if (r.playlist.length==0 || !r.playlist[0].includes(path.slice(0,path.length-1)))
       {fetch(`/play?path=${encodeURIComponent(path.slice(0,path.length-1))}`)}})}
   else {
+    // List files
     document.getElementById("list").innerHTML = r.sort()
       .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 100%, 90%)" `
                 + `href="?path=${encodeURIComponent(path+x)}">${x}</a>`).join("\n")
 }})
 
+// Set up play button
 let pb = document.getElementById("play")
 pb.addEventListener("click", ()=>{
   fetch(`/play?path=${encodeURIComponent(path)}`); 
 })
 
+// Make buttons responsive on mobile
 ;[...document.getElementsByTagName("button")].forEach(x=>x.addEventListener("click", (e)=>{
-  setTimeout(()=>{if (!['In','Out'].includes(e.target.innerHTML)) {e.target.style.background='none'}}, 250); 
+  setTimeout(()=>{if (!['lr','dr','outside'].includes(e.target.id)) {e.target.style.background='none'}}, 150); 
   e.target.style.background='#aaa'
   getUpdate()
 }))
 
+// Make UI less bad on PC
 if (!navigator.userAgent.toLowerCase().includes("mobile"))
   {document.body.style.zoom = 0.6}
 
+// Display state periodically
 let state = {}
 let getUpdate = ()=>{
   fetch("/state").then(r=>r.json()).then(r=>{
@@ -119,7 +130,7 @@ let getUpdate = ()=>{
     document.getElementById("playing").innerHTML = r.file=='' ? "Push &#127926; to start" : r.file + " (" + r.pos.toString().split(".")[0] + "s)"
     document.getElementById("pause").innerHTML = r.playing ? "&#9199;" : "&#9654;"
     document.getElementById("playlist").innerHTML = r.playlist
-      .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 100%, 90%)" `
+      .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 60%, 70%)" `
                 + `href="javascript:void(0);" onclick="fetch('/skip?index=${i}')">${x.split("Music")[1]}</a>`).join("\n")
 })}
 
