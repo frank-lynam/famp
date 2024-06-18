@@ -2,9 +2,9 @@ import time, threading, sys, os, http.server, json, urllib.parse
 
 mp = "/mount/files/Music"
 state = {"running": True, "playing": True, 
-  "in": False, "out": False, 
-  "vol": 30, "file": "",
-  "playlist":[]}
+  "lr": False, "dr": False, "out": False, "index": 0, 
+  "vol": 30, "file": "", "pos": 0,
+  "playlist":[], "updated": time.time()}
 
 class famp(http.server.BaseHTTPRequestHandler):
 
@@ -31,15 +31,17 @@ class famp(http.server.BaseHTTPRequestHandler):
     
     elif ep=="/pause":
       if state["playing"]:
-        os.system('echo "stop" > /tmp/famp-control')
+        os.system("killall -9 mplayer")
         state["playing"] = False
+        state["updated"] = 0
       else:
-        play(state["playlist"][0], state["pos"])
+        play(state["playlist"][state["index"]], state["pos"])
       s.ww("True")
 
     elif ep=="/next":
       if len(state["playlist"]) > 0:
-        state["playlist"] = state["playlist"][1:]
+        state["index"] = (state["index"] + 1) % len(state["playlist"])
+      state["file"] = state["playlist"][state["index"]].split("/")[-1]
       play()
       s.ww("True")
 
@@ -52,22 +54,31 @@ class famp(http.server.BaseHTTPRequestHandler):
       os.system(f'find "{mp + urllib.parse.unquote(qp["path"])}" | egrep -i "opus|mp3|wma|ogg|flac" | tac > famp.playlist')
       with open("famp.playlist") as fl:
         state["playlist"] = [x.strip() for x in fl.readlines() if x.strip()!=""]
+      state["index"] = 0
       play()
       s.ww("True")
 
     elif ep=="/list":
-      s.ww(json.dumps(os.listdir(mp + urllib.parse.unquote(qp["path"]))))
+      if os.path.isfile(mp + urllib.parse.unquote(qp["path"])[:-1]):
+        s.ww('"play"')
+      else:
+        s.ww(json.dumps(os.listdir(mp + urllib.parse.unquote(qp["path"]))))
 
     elif ep=="/mute":
       state[qp["side"]] = not state[qp["side"]]
-      if qp["side"] == "in":
-        os.system(f"amixer -c 1 set LFE {255 if state['in'] else 0}")
-        os.system(f"amixer -c 1 set Center {255 if state['in'] else 0}")
+      if qp["side"] == "lr":
+        os.system(f"amixer -c 1 set LFE {255 if state['lr'] else 0}")
+      elif qp["side"] == "dr":
+        os.system(f"amixer -c 1 set Center {255 if state['dr'] else 0}")
       else:
         os.system(f"amixer -c 1 set Front {255 if state['out'] else 0}")
       s.ww(json.dumps(state[qp["side"]]))
 
     elif ep=="/state":
+      if state["playing"] and float(state["updated"]) > 0:
+        dt = time.time() - float(state["updated"])
+        state["updated"] = float(state["updated"]) + dt
+        state["pos"] = float(state["pos"]) + dt
       s.ww(json.dumps(state))
     
     else:
@@ -78,7 +89,7 @@ def play(path=None, pos=0):
   if path==None:
     if len(state["playlist"]) == 0:
       return
-    path = state["playlist"][0]
+    path = state["playlist"][state["index"]]
 
   state["pos"] = pos
   with open("famp.playlist", "w") as fl:
@@ -88,6 +99,7 @@ def play(path=None, pos=0):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
   os.system(f'mplayer -slave -input file=/tmp/famp-control -msglevel all=4 -loop 0 silence.mp3 > famp.log &')
+  time.sleep(0.05)
   os.system(f'echo "volume {state["vol"]} 1" > /tmp/famp-control')
   os.system(f'echo "loadlist famp.playlist" > /tmp/famp-control')
   os.system(f'echo "seek {pos}" > /tmp/famp-control')
@@ -124,6 +136,7 @@ def get_file(state):
         got = got + 1
       if got == 3:
         break
+    state["updated"] = time.time()
     time.sleep(0.5)
 
 if __name__=="__main__":
