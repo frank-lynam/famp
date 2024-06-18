@@ -64,6 +64,11 @@ class famp(http.server.BaseHTTPRequestHandler):
       else:
         s.ww(json.dumps(os.listdir(mp + urllib.parse.unquote(qp["path"]))))
 
+    elif ep=="/skip":
+      state["index"] = int(qp["index"])
+      play()
+      s.ww("True")
+
     elif ep=="/mute":
       state[qp["side"]] = not state[qp["side"]]
       if qp["side"] == "lr":

@@ -56,19 +56,28 @@ a.file:hover {
 </head>
 
 <body>
-<p style='font-size: 3em' id='playing'>Loading...</p>
+
+<details>
+  <summary style='cursor: pointer; font-size: 3em' id='playing'>Loading...</summary>
+  <p id="playlist"></p>
+</details>
+
 <input id='volume' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+
 <p>
   <button id='pause' onclick="fetch('/pause')">&#9199;</button>
   <button onclick="fetch('/next')">&#9197;</button>
   <button id='play'>&#127926;</button>
 </p>
+
 <p>
   <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='dr' onclick="fetch('/mute?side=dr')">&#x1f37d;</button>
   <button id='outside' onclick="fetch('/mute?side=out')">&#x1f3e1;</button>
 </p>
+
 <p style='font-size: 3em' id='path'></p>
+
 <div id='list'></div>
 
 <script>
@@ -109,6 +118,9 @@ let getUpdate = ()=>{
     document.getElementById("volume").value = r.vol
     document.getElementById("playing").innerHTML = r.file=='' ? "Push &#127926; to start" : r.file + " (" + r.pos.toString().split(".")[0] + "s)"
     document.getElementById("pause").innerHTML = r.playing ? "&#9199;" : "&#9654;"
+    document.getElementById("playlist").innerHTML = r.playlist
+      .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 100%, 90%)" `
+                + `href="javascript:void(0);" onclick="fetch('/skip?index=${i}')">${x.split("Music")[1]}</a>`).join("\n")
 })}
 
 getUpdate()
