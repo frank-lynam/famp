@@ -118,7 +118,7 @@ def get_file(state):
       running = len(fl.readlines()) > 2
     if not running:
       if state["playing"] and len(state["playlist"]) > 0:
-        state["playlist"] = state["playlist"][1:]
+        state["index"] = (state["index"] + 1) % len(state["playlist"])
         play()
       time.sleep(1)
       continue

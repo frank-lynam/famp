@@ -84,19 +84,19 @@ a.file:hover {
 let params = new URLSearchParams(window.location.search)
 let path = params.get("path") != null ? (params.get("path") + "/") : "/"
 document.getElementById("path").innerHTML = ("Root" + path).split("/").map((x,i,a)=>`<a href="/?path=/${encodeURIComponent(a.slice(1,i+1).join("/"))}">${x}</a>`).join("/")
-fetch(`/list?path=${path}`).then(r=>r.json()).then(r=>{
+fetch(`/list?path=${encodeURIComponent(path)}`).then(r=>r.json()).then(r=>{
   if (r=="play") {fetch("/state").then(r=>r.json()).then(r=>{
-    if (!r.playlist[0].includes(path.slice(0,path.length-1)))
-      {fetch(`/play?path=${path.slice(0,path.length-1)}`)}})}
+    if (r.playlist.length==0 || !r.playlist[0].includes(path.slice(0,path.length-1)))
+      {fetch(`/play?path=${encodeURIComponent(path.slice(0,path.length-1))}`)}})}
   else {
     document.getElementById("list").innerHTML = r.sort()
       .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 100%, 90%)" `
-                + `href="?path=${path}${encodeURIComponent(x)}">${x}</a>`).join("\n")
+                + `href="?path=${encodeURIComponent(path+x)}">${x}</a>`).join("\n")
 }})
 
 let pb = document.getElementById("play")
 pb.addEventListener("click", ()=>{
-  fetch(`/play?path=${path}`); 
+  fetch(`/play?path=${encodeURIComponent(path)}`); 
 })
 
 ;[...document.getElementsByTagName("button")].forEach(x=>x.addEventListener("click", (e)=>{
