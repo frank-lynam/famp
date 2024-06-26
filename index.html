@@ -64,7 +64,7 @@ a.file:hover {
   <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='outside' onclick="fetch('/mute?side=out')">&#x1f3e1;</button>
 
-<input style="grid-column: 1/4" id='volume' oninput="fetch('/volume?to=' + this.value)" step=0.00001 type='range' min=0 max=100 value=30>
+<input style="grid-column: 1/4" id='volume' onchange="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
 
   <button id='pause' onclick="fetch('/pause')">&#9199;</button>
   <button onclick="fetch('/next')">&#9197;</button>
@@ -129,8 +129,10 @@ let getUpdate = ()=>{
     document.getElementById("lr").style.background = r.lr ? "#cfc" : "#fcc"
     document.getElementById("dr").style.background = r.dr ? "#cfc" : "#fcc"
     document.getElementById("outside").style.background = r.out ? "#cfc" : "#fcc"
-    document.getElementById("volume").value = r.vol
-    document.getElementById("playing").innerHTML = r.file=='' ? "Push &#127926; to start" : r.file + " (" + r.pos.toString().split(".")[0] + "s)"
+    if (Math.abs(document.getElementById("volume").value - r.vol)>2)
+      {document.getElementById("volume").value = r.vol} 
+    document.getElementById("playing").innerHTML = 
+      r.file=='' ? "Push &#127926; to start" : r.file + " (" + r.pos.toString().split(".")[0] + "s)"
     document.getElementById("pause").innerHTML = r.playing ? "&#9199;" : "&#9654;"
     document.getElementById("playlist").innerHTML = r.playlist
       .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 60%, 70%)" `
