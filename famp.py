@@ -1,9 +1,10 @@
-import time, threading, sys, os, http.server, json, urllib.parse
+import time, threading, sys, os, random
+import http.server, json, urllib.parse
 
 mp = "/mount/files/Music"
 state = {"running": True, "playing": True, 
   "lr": False, "dr": False, "out": False, "index": 0, 
-  "vol": 30, "file": "", "pos": 0,
+  "vol": 30, "file": "", "pos": 0, "path": "",
   "playlist":[], "updated": time.time()}
 
 class famp(http.server.BaseHTTPRequestHandler):
@@ -26,38 +27,58 @@ class famp(http.server.BaseHTTPRequestHandler):
     qp = {}
     if len(parts) > 1:
       qp = {x.split("=")[0]:x.split("=")[-1] for x in parts[1].split("&")}
-    
+    log = ""    
+
     if ep=="/":
       # I like to load it fresh for easy development
+      log = "Index hit"
       with open("index.html") as fl:
         s.ww(fl.read(), content="text/html")
     
+    elif ep=="/favicon.svg":
+      # My totally sweet logo
+
+      s.ww('<svg xmlns="http://www.w3.org/2000/svg"><text>'
+        + '</text>&#127926;</svg>', content="image/svg+xml")
+
     elif ep=="/pause":
       # mplayer's pause call doesn't work, so this is the workaround...
       if state["playing"]:
-        os.system("killall -9 mplayer")
+        log = "Pausing"
+        os.system("killall -9 mplayer 2>/dev/null")
         state["playing"] = False
         state["updated"] = 0
       else:
+        log = "Unpausing"
         play(state["playlist"][state["index"]], state["pos"])
       s.ww("True")
 
     elif ep=="/next":
       # Using the playlist makes this easy!
+      log = "Playing next playlist item"
       if len(state["playlist"]) > 0:
         state["index"] = (state["index"] + 1) % len(state["playlist"])
       state["file"] = state["playlist"][state["index"]].split("/")[-1]
       play()
       s.ww("True")
 
+    elif ep=="/shuffle":
+      # Random sort ftw!
+      log = "Every day I'm shufflin'..."
+      random.shuffle(state["playlist"])
+      play()
+
     elif ep=="/volume":
       # Volume control works great!
-      os.system(f'timeout 5 echo "volume {qp["to"]} 1" > /tmp/famp-control')
+      log = "Setting volume to " + urllib.parse.unquote(qp["to"])
+      send(f'volume {qp["to"]} 1')
       state["vol"] = qp["to"]
       s.ww("True")
 
     elif ep=="/play":
       # Every play call is a playlist, even if it's a playlist of one
+      log = "Playing " + urllib.parse.unquote(qp["path"])
+      state["path"] = urllib.parse.unquote(qp["path"])
       os.system(f'find "{mp + urllib.parse.unquote(qp["path"])}" | egrep -i "opus|mp3|wma|ogg|flac" | tac > famp.playlist')
       with open("famp.playlist") as fl:
         state["playlist"] = [x.strip() for x in fl.readlines() if x.strip()!=""]
@@ -67,6 +88,7 @@ class famp(http.server.BaseHTTPRequestHandler):
 
     elif ep=="/list":
       # Returns the folder contents if a folder, and play if a file
+      log = "Listed " + urllib.parse.unquote(qp["path"])
       if os.path.isfile(mp + urllib.parse.unquote(qp["path"])[:-1]):
         s.ww('"play"')
       else:
@@ -81,12 +103,13 @@ class famp(http.server.BaseHTTPRequestHandler):
     elif ep=="/mute":
       # Stateful mute on the hardware controller side
       state[qp["side"]] = not state[qp["side"]]
+      log = ("Unmuted " if state[qp["side"]] else "Muted ") + qp["side"]
       if qp["side"] == "lr":
-        os.system(f"amixer -c 1 set LFE {255 if state['lr'] else 0}")
+        os.system(f"amixer -c 1 set LFE {255 if state['lr'] else 0} >/dev/null")
       elif qp["side"] == "dr":
-        os.system(f"amixer -c 1 set Center {255 if state['dr'] else 0}")
+        os.system(f"amixer -c 1 set Center {255 if state['dr'] else 0} >/dev/null")
       else:
-        os.system(f"amixer -c 1 set Front {255 if state['out'] else 0}")
+        os.system(f"amixer -c 1 set Front {255 if state['out'] else 0} >/dev/null")
       s.ww(json.dumps(state[qp["side"]]))
 
     elif ep=="/state":
@@ -100,6 +123,18 @@ class famp(http.server.BaseHTTPRequestHandler):
     else:
       s.ww("False")
 
+    if log!="":
+      print(f"[{s.log_date_time_string()}] {s.request.getpeername()[0]} - {log}")
+
+  def log_request(s, *args):
+    # Shush you!
+    pass
+
+def send(m):
+  os.system(f"echo {m} > /tmp/famp-control &\necho $! > famp.pid")
+  time.sleep(0.2)
+  os.system("kill -9 $(cat famp.pid) 2>/dev/null")
+
 def play(path=None, pos=0):
   # A fresh mplayer instance was the most reliable way to start a song
   global state
@@ -111,13 +146,13 @@ def play(path=None, pos=0):
   state["pos"] = pos
   with open("famp.playlist", "w") as fl:
     fl.write(path)
-  os.system("killall -9 mplayer")
+  os.system("killall -9 mplayer 2>/dev/null")
   if "famp-control" in os.listdir("/tmp"):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
   os.system(f'mplayer -slave -input file=/tmp/famp-control -msglevel all=4 -playlist famp.playlist > famp.log &')
-  os.system(f'timeout 5 echo "volume {state["vol"]} 1" > /tmp/famp-control')
-  os.system(f'timeout 5 echo "seek {pos}" > /tmp/famp-control')
+  send(f'volume {state["vol"]} 1')
+  send(f'seek {pos}')
   state["playing"] = True
 
 def get_file(state):
@@ -133,9 +168,9 @@ def get_file(state):
         play()
       time.sleep(1)
       continue
-    os.system("timeout 5 echo 'get_property filename' > /tmp/famp-control")
-    os.system("timeout 5 echo 'get_property volume' > /tmp/famp-control")
-    os.system("timeout 5 echo 'get_property time_pos' > /tmp/famp-control")
+    send("get_property filename")
+    send("get_property volume")
+    send("get_property time_pos")
     time.sleep(0.05)
     with open("famp.log", errors='ignore') as fl:
       d = fl.readlines()
@@ -160,28 +195,29 @@ if __name__=="__main__":
   if "famp-control" in os.listdir("/tmp"):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
-  os.system("amixer -c 1 set PCM 255")
-  os.system("amixer -c 1 set LFE 0")
-  os.system("amixer -c 1 set Center 0")
-  os.system("amixer -c 1 set Front 0")
+  os.system("amixer -c 1 set PCM 255 >/dev/null")
+  os.system("amixer -c 1 set LFE 0 >/dev/null")
+  os.system("amixer -c 1 set Center 0 >/dev/null")
+  os.system("amixer -c 1 set Front 0 >/dev/null")
 
   get_file_thread = threading.Thread(target=get_file, args=(state,))
   get_file_thread.start()
 
-  print("Prepped for mplayer and set system volume to max")
+  print("\nPrepped for mplayer and set system volume to max")
 
   try:
     # Start server
-    print ("Frank's Awesome Media Player started! Hit port 8000 for controls =]")
+    print ("Frank's Awesome Media Player started! Hit port 8000 for controls =]\n")
     http.server.HTTPServer(('', 8000), famp).serve_forever()
   except:
     # Clean up
-    print("\rBuh-bye!")
-    os.system("killall -9 mplayer")
-    os.system("amixer -c 1 set PCM 0")
+    print("\nBuh-bye!")
+    os.system("killall -9 mplayer 2>/dev/null")
+    os.system("amixer -c 1 set PCM 0 >/dev/null")
     state["running"] = False
     get_file_thread.join()
     os.system("rm -f /tmp/famp-control")
     os.system("rm -f famp.playlist")
     os.system("rm -f famp.log")
-    print("Quit mplayer and set system volume to zero")
+    os.system("rm -f famp.pid")
+    print("Quit mplayer and set system volume to zero\n")

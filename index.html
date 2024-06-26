@@ -1,5 +1,6 @@
 <html>
 <head>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <title>Frank's Awesome Media Player</title>
 <style>
 
@@ -59,15 +60,15 @@ a.file:hover {
 
 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; justify-items: center">
 
-  <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='dr' onclick="fetch('/mute?side=dr')">&#x1f37d;</button>
+  <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='outside' onclick="fetch('/mute?side=out')">&#x1f3e1;</button>
 
-<input style="grid-column: 1/4" id='volume' oninput="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+<input style="grid-column: 1/4" id='volume' oninput="fetch('/volume?to=' + this.value)" step=0.00001 type='range' min=0 max=100 value=30>
 
   <button id='pause' onclick="fetch('/pause')">&#9199;</button>
   <button onclick="fetch('/next')">&#9197;</button>
-  <button id='play'>&#127926;</button>
+  <button id='play' title='play'>&#127926;</button>
 
 </div>
 
@@ -103,8 +104,10 @@ fetch(`/list?path=${encodeURIComponent(path)}`).then(r=>r.json()).then(r=>{
 
 // Set up play button
 let pb = document.getElementById("play")
-pb.addEventListener("click", ()=>{
-  fetch(`/play?path=${encodeURIComponent(path)}`); 
+pb.addEventListener("click", (e)=>{
+  if (e.target.title=="play")
+    {fetch(`/play?path=${encodeURIComponent(path)}`)}
+  else {fetch('/shuffle')} 
 })
 
 // Make buttons responsive on mobile
@@ -132,6 +135,8 @@ let getUpdate = ()=>{
     document.getElementById("playlist").innerHTML = r.playlist
       .map((x,i)=>`<a class="file" style="background: hsl(${(i*37)%360}, 60%, 70%)" `
                 + `href="javascript:void(0);" onclick="fetch('/skip?index=${i}')">${x.split("Music")[1]}</a>`).join("\n")
+   document.getElementById("play").innerHTML = r.path==path ? "&#127922;" : "&#127926;"
+   document.getElementById("play").title = r.path==path ? "shuffle" : "play"
 })}
 
 getUpdate()
