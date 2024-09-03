@@ -64,7 +64,7 @@ a.file:hover {
   <button id='lr' onclick="fetch('/mute?side=lr')">&#x1f4fa;</button>
   <button id='outside' onclick="fetch('/mute?side=out')">&#x1f3e1;</button>
 
-<input style="grid-column: 1/4" id='volume' onchange="fetch('/volume?to=' + this.value)" type='range' min=0 max=100 value=30>
+<input style="grid-column: 1/4" id='volume' onchange="fetch('/volume?to=' + this.value)" type='range' min=0 max=255 value=75>
 
   <button id='pause' onclick="fetch('/pause')">&#9199;</button>
   <button onclick="fetch('/next')">&#9197;</button>

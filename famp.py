@@ -4,7 +4,7 @@ import http.server, json, urllib.parse
 mp = "/mount/files/Music"
 state = {"running": True, "playing": True, 
   "lr": False, "dr": False, "out": False, "index": 0, 
-  "vol": 30, "file": "", "pos": 0, "path": "",
+  "vol": 75, "file": "", "pos": 0, "path": "",
   "playlist":[], "updated": time.time()}
 
 class famp(http.server.BaseHTTPRequestHandler):
@@ -71,8 +71,8 @@ class famp(http.server.BaseHTTPRequestHandler):
     elif ep=="/volume":
       # Volume control works great!
       log = "Setting volume to " + urllib.parse.unquote(qp["to"])
-      send(f'volume {qp["to"]} 1')
       state["vol"] = qp["to"]
+      set_volume()
       s.ww("True")
 
     elif ep=="/play":
@@ -151,7 +151,7 @@ def play(path=None, pos=0):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
   os.system(f'mplayer -slave -input file=/tmp/famp-control -msglevel all=4 -playlist famp.playlist > famp.log &')
-  send(f'volume {state["vol"]} 1')
+  send(f'volume 100 1')
   send(f'seek {pos}')
   state["playing"] = True
 
@@ -169,7 +169,7 @@ def get_file(state):
       time.sleep(1)
       continue
     send("get_property filename")
-    send("get_property volume")
+    #send("get_property volume")
     send("get_property time_pos")
     time.sleep(0.05)
     with open("famp.log", errors='ignore') as fl:
@@ -179,23 +179,28 @@ def get_file(state):
       if "ANS_filename=" in x:
         state["file"] = x.split("ANS_filename=")[1].strip()
         got = got + 1
-      if "ANS_volume=" in x:
-        state["vol"] = x.split("ANS_volume=")[1].strip()
-        got = got + 1
+      #if "ANS_volume=" in x:
+      #  state["vol"] = x.split("ANS_volume=")[1].strip()
+      #  got = got + 1
       if "ANS_time_pos=" in x:
         state["pos"] = x.split("ANS_time_pos=")[1].strip()
         got = got + 1
-      if got == 3:
+      if got == 2:
         break
     state["updated"] = time.time()
     time.sleep(0.5)
+
+def set_volume():
+  global state
+  os.system(f"amixer -c 1 set PCM {state['vol']} >/dev/null")
 
 if __name__=="__main__":
   # Prep environment
   if "famp-control" in os.listdir("/tmp"):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
-  os.system("amixer -c 1 set PCM 255 >/dev/null")
+  os.system("amixer -c 1 set PCM 75 >/dev/null")
+  os.system("amixer -c 1 set Master 255 >/dev/null")
   os.system("amixer -c 1 set LFE 0 >/dev/null")
   os.system("amixer -c 1 set Center 0 >/dev/null")
   os.system("amixer -c 1 set Front 0 >/dev/null")
