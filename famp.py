@@ -199,6 +199,7 @@ if __name__=="__main__":
   if "famp-control" in os.listdir("/tmp"):
     os.system("unlink /tmp/famp-control")
   os.system("mkfifo /tmp/famp-control")
+  print("Note: if it says card not found,\n  try vncing in to 5900")
   os.system("amixer -c 1 set PCM 75 >/dev/null")
   os.system("amixer -c 1 set Master 255 >/dev/null")
   os.system("amixer -c 1 set LFE 0 >/dev/null")
